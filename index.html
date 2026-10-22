@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="dark light">
+    <meta name="theme-color" content="#15140f">
+    <title>散修长生录</title>
+    <script>
+        // 配色主题（v7.20）：全局偏好，不跟存档走；在样式表加载前就写到 <html data-theme>，避免首屏先闪一下别的配色
+        (function () {
+            var THEMES = { xuanzhi: '#e9e2cf', qinglv: '#0b1517', xuanye: '#0c0b17', songyan: '#15140f' };
+            var t = 'songyan';
+            try { var saved = localStorage.getItem('xiuxianTheme'); if (saved && THEMES[saved]) t = saved; } catch (e) {}
+            document.documentElement.setAttribute('data-theme', t);
+            var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', THEMES[t]);
+        })();
+    </script>
+    <link rel="stylesheet" href="style.css?v=14.56">
+
+</head>
+<body data-panel="cultivation">
+    <!-- v7.26 漫画风图标墨线：加粗外描边 + 右下硬阴影（物品图标的 icoSvg 统一引用 #icoInk） -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+        <filter id="icoInk" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+            <feMorphology in="SourceAlpha" operator="dilate" radius="0.75" result="thick"/>
+            <feFlood flood-color="#120e09"/><feComposite in2="thick" operator="in" result="outline"/>
+            <feOffset in="outline" dx="0.9" dy="1.1" result="drop"/>
+            <feFlood flood-color="#000" flood-opacity="0.5"/><feComposite in2="drop" operator="in" result="shadow"/>
+            <feMerge><feMergeNode in="shadow"/><feMergeNode in="outline"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+    </defs></svg>
+    <a class="skip-link" href="#main">跳到主要内容</a>
+    <h1 class="sr-only">散修长生录</h1>
+    <div id="notificationLive" class="sr-only" role="status" aria-live="polite"></div>
+    <div class="container">
+        <!-- 侧边导航栏 -->
+        <div class="sidebar">
+            <div class="logo" onclick="showStartScreen()" aria-label="返回存档选择">仙</div>
+            <div class="skill-tree" id="skillTree"></div>
+            <div class="nav-grid">
+                <button type="button" class="nav-mini" data-nav="inventory" onclick="switchPanel('inventory')" title="背包"><span class="nav-ico">🎒</span><span>背包</span><span class="badge-dot" id="invBadgeDesktop" title="背包快满了" hidden></span></button>
+                <button type="button" class="nav-mini" data-nav="equipment" onclick="switchPanel('equipment')" title="装备"><span class="nav-ico">🎽</span><span>装备</span></button>
+                <button type="button" class="nav-mini" data-nav="shop" onclick="switchPanel('shop')" title="商城"><span class="nav-ico">🏪</span><span>商城</span></button>
+                <button type="button" class="nav-mini" data-nav="settings" onclick="switchPanel('settings')" title="设置"><span class="nav-ico">⚙️</span><span>设置</span></button>
+                <button type="button" class="nav-mini" data-nav="codex" onclick="switchPanel('codex')" title="图鉴：妖兽 / 法宝 / 万物 / 画卷"><span class="nav-ico">📖</span><span>图鉴</span><span class="badge-dot" id="codexBadge" title="图鉴有新收录" hidden></span></button>
+                <button type="button" class="nav-mini" data-nav="rank" onclick="switchPanel('rank')" title="排行榜：境界榜 / 问道塔榜"><span class="nav-ico">🏆</span><span>排行</span></button>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content" id="main">
+            <!-- 游戏开始前的创建屏幕 -->
+            <div id="startScreen" class="modal show">
+                <div class="modal-content" role="dialog" aria-modal="true">
+                    <div id="startHero"></div>
+                    <div class="modal-title">⚡ 散修长生录 ⚡</div>
+                    <!-- 存档选择：最多 3 个存档 -->
+                    <p id="slotHint" style="color: var(--text-l4); margin-bottom: 20px;">选择一个存档，或新建角色（最多 3 个存档）</p>
+                    <div id="slotSelect" class="slot-select"></div>
+
+                    <div id="createSection" style="display: none;">
+                    <button class="btn btn-secondary" onclick="showSlotSelect()" style="margin-bottom: 12px; padding: 4px 12px;">← 返回存档选择</button>
+                    <p style="color: var(--text-l4); margin-bottom: 20px;"><span id="createSlotLabel"></span> · 灵气苏醒，你的修仙之路即将开启</p>
+
+                    <div class="create-form">
+                        <div class="form-group">
+                            <label for="playerName">修仙者名讳 *</label>
+                            <input type="text" id="playerName" name="playerName" autocomplete="off" spellcheck="false" placeholder="输入你的名字（最多 8 个字）" maxlength="8">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="playerGender">性别</label>
+                            <select id="playerGender" name="playerGender" autocomplete="off">
+                                <option value="男">男</option>
+                                <option value="女">女</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="playerOrigin">出身背景 *</label>
+                            <select id="playerOrigin" name="playerOrigin" autocomplete="off">
+                                <option value="">选择出身</option>
+                                <option value="orphan">孤儿 - 多得灵玉饰品（生活技能速度+5%）</option>
+                                <option value="disciple">玄门后裔 - 多得筑基丹和铁剑</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="playerSpiritRoot">灵根属性 *</label>
+                            <select id="playerSpiritRoot" name="playerSpiritRoot" autocomplete="off">
+                                <option value="">选择灵根</option>
+                                <option value="metal">金灵根【⚔️ 偏战斗·稳定输出】- 克制木灵根</option>
+                                <option value="wood">木灵根【🌾 偏种田】- 克制土灵根</option>
+                                <option value="water">水灵根【🧪 偏炼丹·耐久】- 克制火灵根</option>
+                                <option value="fire">火灵根【⚔️ 偏战斗·爆发输出】- 克制金灵根</option>
+                                <option value="earth">土灵根【🛡️ 偏坦克】- 克制水灵根</option>
+                                <option value="wind">风灵根【⚖️ 均衡全能】- 无克制，攻速+10%</option>
+                                <option value="thunder">雷灵根【📈 偏养成】- 克制冰灵根</option>
+                                <option value="ice">冰灵根【🧪 偏炼丹·省料】- 克制雷灵根</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="playerRootGrade">灵根资质 *</label>
+                            <select id="playerRootGrade" name="playerRootGrade" autocomplete="off">
+                                <option value="">选择资质</option>
+                                <option value="tian">天灵根</option>
+                                <option value="zhen">真灵根</option>
+                                <option value="wei">伪灵根</option>
+                            </select>
+                        </div>
+
+                        <button class="btn" onclick="startGame()" style="width: 100%; margin-top: 20px;">
+                            🌟 开始修行 🌟
+                        </button>
+                    </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 游戏进行中的界面 -->
+            <div id="gameScreen" class="hidden">
+                <!-- 顶部信息栏 -->
+                <div class="header">
+                    <div class="player-info">
+                        <div class="info-item">
+                            <div class="info-label">修仙者</div>
+                            <div class="info-value" id="playerNameDisplay">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">当前境界</div>
+                            <div class="info-value" id="realmDisplay">练气一层</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label"><span data-ico="qi">✨</span> 修为进度</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="cultivationProgress" style="width: 0%">
+                                    <span id="progressText">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="currency-bar" id="currencyBar">
+                        <div class="cur-chip" onclick="switchPanel('shop')" role="button" tabindex="0" title="灵石：点击进入商城" aria-label="灵石，点击进入商城">
+                            <span data-ico="coin">💎</span><span class="cur-name">灵石</span><b id="coinAmount">100</b>
+                        </div>
+                        <div class="cur-chip" data-cur="danhuo" style="display: none;" onclick="switchPanel('danhuo')" role="button" tabindex="0" title="丹火：点击进入丹火（淬炼装备、强化灵根）" aria-label="丹火">
+                            <span data-ico="danhuo">🔥</span><span class="cur-name">丹火</span><b class="cur-amount">0</b>
+                        </div>
+                        <div class="cur-chip" data-cur="shenshi" style="display: none;" onclick="switchPanel('shenshi')" role="button" tabindex="0" title="神识：点击进入神识（分身强化、专注、感应）" aria-label="神识">
+                            <span data-ico="shenshi">👁️</span><span class="cur-name">神识</span><b class="cur-amount">0</b>
+                        </div>
+                        <div class="cur-chip" data-cur="daoguo" style="display: none;" onclick="switchPanel('daoguo')" role="button" tabindex="0" title="道果：点击进入道果（淬体、悟法、合道）" aria-label="道果">
+                            <span data-ico="daoguo">🍎</span><span class="cur-name">道果</span><b class="cur-amount">0</b>
+                        </div>
+                    </div>
+                    <div id="breakThroughBtn" class="btn btn-secondary" onclick="showBreakthroughModal()" style="display: none;">
+                        ✨ 尝试突破 ✨
+                    </div>
+                </div>
+
+                <!-- 新手任务条（任务全部完成后自动隐藏） -->
+                <div id="questBanner" class="quest-banner" style="display: none;"></div>
+                <!-- 支持作者的一次性提示（v7.79，网页版，第一次到筑基 / 看完证道结局） -->
+                <div id="supportNudge" class="support-nudge" hidden></div>
+
+                <!-- 手机端境界感悟：侧栏在手机上排到页面最底部，渡劫 / 渡衰 / 精元开关等入口放这里（桌面端隐藏） -->
+                <details id="realmLoreMobile" class="realm-lore-mobile">
+                    <summary id="realmLoreMobileSummary">📜 境界感悟</summary>
+                    <div id="realmLoreMobileBox"></div>
+                </details>
+
+                <!-- 面板容器 -->
+                <div class="panel-container">
+                    <!-- 主面板 -->
+                    <div class="main-panel">
+                        <!-- 手机端技能栏（桌面端隐藏，由左侧技能树代替） -->
+                        <div id="mobileSkillBar" class="mobile-skill-bar"></div>
+                        <!-- 全局进度条 -->
+                        <div id="globalProgressBar" style="display: none; margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <span id="progressActionName" style="color: var(--jade); font-weight: bold;">当前动作</span>
+                                <span id="progressTimeRemain" style="color: var(--gold); font-size: 0.9em;">0s</span>
+                            </div>
+                            <div class="progress-bar" style="height: 6px;">
+                                <div id="globalProgressFill" class="progress-fill" style="width: 0%; height: 100%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- 分身状态条（元婴初期起显示） -->
+                        <div id="cloneBar" class="clone-bar" style="display: none;"></div>
+                        <div id="plotBar" class="clone-bar" style="display: none;"></div>
+
+                        <!-- 修炼面板 -->
+                        <div id="panel-cultivation" class="panel-content">
+                            <div class="panel-title">🧘 修炼</div>
+                            <div class="skill-exp-header" data-skill="cultivation"></div>
+
+                            <!-- 功法：一行显示当前功法与速度，切换是次要操作（描边按钮） -->
+                            <div class="art-card">
+                                <div class="art-card-main">
+                                    <span class="art-card-label">功法</span>
+                                    <div id="currentArtDisplay"><b class="art-name">引气诀</b><span class="art-speed">修炼速度 ×<span id="artSpeedDisplay">1.0</span></span></div>
+                                </div>
+                                <button id="switchArtBtn" class="btn btn-secondary art-switch" onclick="showArtSwitchModal()">切换功法</button>
+                            </div>
+
+                            <div class="action-list" id="cultivationActions">
+                                <!-- 吐纳灵气 - 已解锁 -->
+                                <div class="action-item" onclick="selectAction('cultivation', 'basic')">
+                                    <div class="action-name">🟢 吐纳灵气</div>
+                                    <div class="action-desc">基础修为 · 5秒/次</div>
+                                </div>
+
+                                <!-- 小周天 - 条件解锁 -->
+                                <div class="action-item action-locked" onclick="selectAction('cultivation', 'small')">
+                                    <div class="action-name">⭕ 小周天</div>
+                                    <div class="action-desc">效率提升 · 需练气一层</div>
+                                    <div class="action-lock-hint" id="lock-hint-small" style="display: none; font-size: 0.8em; color: var(--color-warning); margin-top: 4px;"><span id="lock-level-small">需要练气一层</span></div>
+                                </div>
+
+                                <!-- 大周天 - 条件解锁 -->
+                                <div class="action-item action-locked" onclick="selectAction('cultivation', 'big')">
+                                    <div class="action-name">⭕ 大周天</div>
+                                    <div class="action-desc">中期主力 · 需练气九层</div>
+                                    <div class="action-lock-hint" id="lock-hint-big" style="display: none; font-size: 0.8em; color: var(--color-warning); margin-top: 4px;"><span id="lock-level-big">需要练气九层</span></div>
+                                </div>
+
+                                <!-- 龟息术 - 条件解锁 -->
+                                <div class="action-item action-locked" onclick="selectAction('cultivation', 'breath')">
+                                    <div class="action-name">⭕ 龟息术</div>
+                                    <div class="action-desc">高产出 · 需练气十三层</div>
+                                    <div class="action-lock-hint" id="lock-hint-breath" style="display: none; font-size: 0.8em; color: var(--color-warning); margin-top: 4px;"><span id="lock-level-breath">需要练气十三层</span></div>
+                                </div>
+
+                                <!-- 顿悟 - 条件解锁 -->
+                                <div class="action-item action-locked" onclick="selectAction('cultivation', 'epiphany')">
+                                    <div class="action-name">⭕ 顿悟</div>
+                                    <div class="action-desc">后期爆发 · 需筑基中期</div>
+                                    <div class="action-lock-hint" id="lock-hint-epiphany" style="display: none; font-size: 0.8em; color: var(--color-warning); margin-top: 4px;"><span id="lock-level-epiphany">需要筑基中期</span></div>
+                                </div>
+                            </div>
+
+                            <div class="action-detail show" id="action-detail-cultivation-basic">
+                                <div class="detail-row">
+                                    <span>当前动作:</span>
+                                    <span id="activeActionDisplay">-</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span>进度:</span>
+                                    <span id="activeProgress">0%</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span><span data-ico="qi">✨</span> 获得修为:</span>
+                                    <span id="activeOutput">0</span>
+                                </div>
+                                <button class="btn" id="stopBtn" onclick="stopAction()" style="display: none;">
+                                    ⏹️ 停止
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 炼丹面板 -->
+                        <div id="panel-alchemy" class="panel-content hidden">
+                            <div class="panel-title">🧪 炼丹</div>
+                            <div class="skill-exp-header" data-skill="alchemy"></div>
+                            <div class="skill-list" id="alchemySkills"></div>
+                            <div id="alchemyBoostBar" class="boost-bar" style="display: none;"></div>
+                            <div class="action-list" id="alchemyActions"></div>
+                            <div class="action-detail" id="action-detail-alchemy"></div>
+                        </div>
+
+                        <!-- 炼器面板 -->
+                        <div id="panel-forging" class="panel-content hidden">
+                            <div class="panel-title">🔨 炼器</div>
+                            <div class="skill-exp-header" data-skill="forging"></div>
+                            <div class="skill-list" id="forgingSkills"></div>
+                            <div class="action-list" id="forgingActions"></div>
+                            <div class="action-detail" id="action-detail-forging"></div>
+                        </div>
+
+                        <!-- 灵田面板 -->
+                        <div id="panel-farming" class="panel-content hidden">
+                            <div class="panel-title">🌾 灵田</div>
+                            <div class="skill-exp-header" data-skill="farming"></div>
+                            <div class="skill-list" id="farmingSkills"></div>
+                            <div class="action-list" id="farmingActions"></div>
+                            <div class="action-detail" id="action-detail-farming"></div>
+                        </div>
+
+                        <!-- 采矿面板 -->
+                        <div id="panel-mining" class="panel-content hidden">
+                            <div class="panel-title">⛏️ 采矿</div>
+                            <div class="skill-exp-header" data-skill="mining"></div>
+                            <div class="skill-list" id="miningSkills"></div>
+                            <div class="action-list" id="miningActions"></div>
+                            <div class="action-detail" id="action-detail-mining"></div>
+                        </div>
+
+                        <!-- 丹火面板（结丹期解锁） -->
+                        <div id="panel-danhuo" class="panel-content hidden">
+                            <div class="panel-title">🔥 丹火</div>
+                            <div class="skill-exp-header" data-skill="danhuo"></div>
+                            <div id="danhuoUses" class="skill-uses"></div>
+                            <div class="action-list" id="danhuoActions"></div>
+                            <div class="action-detail" id="action-detail-danhuo"></div>
+                        </div>
+
+                        <!-- 神识面板（元婴期解锁） -->
+                        <div id="panel-shenshi" class="panel-content hidden">
+                            <div class="panel-title">👁️ 神识</div>
+                            <div class="skill-exp-header" data-skill="shenshi"></div>
+                            <div id="shenshiUses" class="skill-uses"></div>
+                            <div class="action-list" id="shenshiActions"></div>
+                            <div class="action-detail" id="action-detail-shenshi"></div>
+                        </div>
+
+                        <!-- 道果面板（合体期解锁） -->
+                        <div id="panel-daoguo" class="panel-content hidden">
+                            <div class="panel-title">🍎 道果</div>
+                            <div class="skill-exp-header" data-skill="daoguo"></div>
+                            <div id="daoguoUses" class="skill-uses"></div>
+                            <div class="action-list" id="daoguoActions"></div>
+                            <div class="action-detail" id="action-detail-daoguo"></div>
+                        </div>
+
+                        <!-- 悟道面板（化神期解锁） -->
+                        <div id="panel-wudao" class="panel-content hidden">
+                            <div class="panel-title">☯️ 悟道</div>
+                            <div class="skill-exp-header" data-skill="wudao"></div>
+                            <div class="law-intro">参悟八种法则，领悟越深，战斗与生活的加成越强。法则等级上限随境界提高；与自己灵根同名的法则参悟更快。参悟会占用主角的行动（分身不能参悟）。</div>
+                            <div class="action-list law-list" id="wudaoActions"></div>
+                        </div>
+
+                        <!-- 宗门面板（v7.49） -->
+                        <div id="panel-sect" class="panel-content hidden">
+                            <div class="panel-title">🏯 宗门</div>
+                            <div id="sectContent"></div>
+                        </div>
+
+                        <!-- 战斗面板 -->
+                        <div id="panel-battle" class="panel-content hidden">
+                            <div class="panel-title">⚔️ 战斗</div>
+                            <div class="skill-exp-header" data-skill="battle"></div>
+                            <div id="hpRestoreBar" class="hp-restore-bar"></div>
+                            <!-- 战斗/秘境标签页 -->
+                            <div style="display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid var(--border-l3);">
+                                <button id="battleTab-areas" class="panel-tab active" onclick="switchBattleTab('areas')" style="flex: 1; padding: 10px; background: none; border: none; color: var(--gold); cursor: pointer; font-weight: bold; border-bottom: 3px solid var(--gold);">战斗区域</button>
+                                <button id="battleTab-dungeons" class="panel-tab" onclick="switchBattleTab('dungeons')" style="flex: 1; padding: 10px; background: none; border: none; color: var(--text-l4); cursor: pointer; font-weight: bold;">秘境</button>
+                                <button id="battleTab-tower" class="panel-tab" onclick="switchBattleTab('tower')" style="flex: 1; padding: 10px; background: none; border: none; color: var(--text-l4); cursor: pointer; font-weight: bold; display: none;">问道塔</button>
+                            </div>
+                            <!-- 战斗区域内容 -->
+                            <div id="battleContent-areas">
+                                <div id="autoBattleBar" class="auto-battle-bar"></div>
+                                <div class="skill-list" id="battleSkills"></div>
+                                <div class="action-list" id="battleActions"></div>
+                                <div class="action-detail" id="action-detail-battle"></div>
+                            </div>
+                            <!-- 秘境内容 -->
+                            <div id="battleContent-dungeons" style="display: none;">
+                                <!-- 克制预览条 -->
+                                <div id="battleCounterPreview" style="background: rgba(111,156,138,0.1); border: 1px solid var(--jade); border-radius: 4px; padding: 12px; margin-bottom: 15px; display: none;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <div class="sec-title" style="color: var(--jade); font-weight: bold;">⚡ 克制关系预览</div>
+                                        <button onclick="showCounterSystemModal()" style="background: rgba(111,156,138,0.2); border: 1px solid var(--jade); color: var(--jade); padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 0.85em;">📖 详情</button>
+                                    </div>
+                                    <div id="counterInfo" style="color: var(--gold); font-size: 0.9em; line-height: 1.6em;"></div>
+                                </div>
+                                <div class="action-list" id="dungeonActions"></div>
+                            </div>
+                            <!-- 问道塔（v7.57） -->
+                            <div id="battleContent-tower" style="display: none;">
+                                <div id="towerContent"></div>
+                            </div>
+                        </div>
+
+                        <!-- P1-1 战斗UI容器 -->
+                        <div id="battleContainer" class="battle-container hidden">
+                            <!-- 战斗顶部栏 -->
+                            <div class="battle-header">
+                                <div>
+                                    <div class="battle-title" id="battleTitle">⚔️ 秘境战斗中</div>
+                                    <div id="dungeonProgress" class="dungeon-progress" style="display: none;"></div>
+                                </div>
+                                <div class="battle-controls">
+                                    <span id="autoBattleStatus" class="auto-battle-status"></span><button id="btn-retreat" class="btn-retreat" onclick="retreatFromDungeon()">撤退</button>
+                                </div>
+                            </div>
+
+                            <!-- 双方状态栏 -->
+                            <div class="battle-status">
+                                <div class="combatant player">
+                                    <div class="combatant-name combatant-player-name" id="playerNameBattle">玩家</div>
+                                    <div class="hp-bar">
+                                        <div class="hp-fill" id="playerHPBar"></div>
+                                        <div class="hp-text" id="playerHPText">0/0</div>
+                                    </div>
+                                    <div class="atk-bar" title="攻击蓄力进度"><div class="atk-fill" id="playerAtkBar"></div></div>
+                                    <div class="combatant-stats">
+                                        <span class="cs-stat" title="攻击"><i>攻</i><span id="playerAtk">0</span></span>
+                                        <span class="cs-stat" title="防御"><i>防</i><span id="playerDef">0</span></span>
+                                        <span class="cs-stat" title="命中率"><i>命</i><span id="playerHit">-</span></span>
+                                    </div>
+                                </div>
+
+                                <div class="combatant monster">
+                                    <div class="combatant-name combatant-monster-name" id="monsterNameBattle">敌人</div>
+                                    <div class="hp-bar">
+                                        <div class="hp-fill low" id="monsterHPBar"></div>
+                                        <div class="hp-text" id="monsterHPText">0/0</div>
+                                    </div>
+                                    <div class="atk-bar" title="攻击蓄力进度"><div class="atk-fill" id="monsterAtkBar"></div></div>
+                                    <div class="combatant-stats">
+                                        <span class="cs-stat" title="攻击"><i>攻</i><span id="monsterAtk">0</span></span>
+                                        <span class="cs-stat" title="防御"><i>防</i><span id="monsterDef">0</span></span>
+                                        <span class="cs-stat" title="命中率"><i>命</i><span id="monsterHit">-</span></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 战斗场景 -->
+                            <div class="battle-scene bs-stage" id="battleStage">
+                                <div class="bs-bg" id="battleBg"></div>
+                                <div class="bs-fighter bs-player" id="playerSprite"></div>
+                                <div class="monster-sprite" id="monsterSprite"></div>
+                                <div class="bs-fx-layer" id="battleFxLayer"></div>
+                                <div class="bs-vignette"></div>
+                                <div id="damageFloatLayer" class="damage-float-layer"></div>
+                            </div>
+
+                            <!-- 战斗日志 -->
+                            <!-- v7.73 本次战利品 -->
+                            <div id="battleLoot" class="battle-loot"></div>
+
+                            <div class="battle-log-hint"><span class="blh-title">战报</span>保留最近 30 条，可上下滚动查看</div>
+                            <div id="battleLog" class="battle-log" tabindex="0" aria-label="战斗日志，可上下滚动"></div>
+
+                            <!-- 食物快捷栏与速度控制 -->
+                            <div class="food-bar">
+                                <div class="food-slot">
+                                    <span class="food-icon" id="foodIcon">🍽️</span>
+                                    <div class="food-info">
+                                        <span class="food-name" id="foodName">无食物</span>
+                                        <span class="food-count" id="foodCountText">在炼丹中制作</span>
+                                    </div>
+                                </div>
+                                <label class="auto-eat-toggle">
+                                    <input type="checkbox" id="autoEatToggle" onchange="toggleAutoEat(this.checked)">
+                                    <span>自动食用</span>
+                                </label>
+
+                                <div style="margin-left: auto;"></div>
+
+                                <div class="battle-speed-control">
+                                    <span style="color: var(--text-l4); margin-right: 8px;">速度:</span>
+                                    <button class="speed-btn active" data-speed="1" onclick="setBattleSpeed(1)">1x</button>
+                                    <button class="speed-btn" data-speed="2" onclick="setBattleSpeed(2)">2x</button>
+                                    <button class="speed-btn" data-speed="4" onclick="setBattleSpeed(4)">4x</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 背包面板 -->
+                        <div id="panel-inventory" class="panel-content hidden">
+                            <div class="panel-title">🎒 背包</div>
+                            <div style="margin-bottom: 15px;">
+                                <span style="color: var(--text-l4);">容量: </span>
+                                <span id="inventoryCapacity" style="color: var(--jade); font-weight: bold;">0/50</span>
+                            </div>
+                            <div class="inventory-hint">装备已单独放在「装备」界面：<a href="#" onclick="switchPanel('equipment'); return false;">🎽 前往装备</a>；点击背包里的装备可查看属性并装备。</div>
+                            <div class="inventory-grid" id="inventoryGrid"></div>
+                        </div>
+
+                        <!-- 装备面板 -->
+                        <div id="panel-equipment" class="panel-content hidden">
+                            <div class="panel-title">🎽 装备</div>
+                            <div id="equipmentContent"></div>
+                        </div>
+
+                        <!-- 商城面板 -->
+                        <div id="panel-shop" class="panel-content hidden">
+                            <div class="panel-title">🏪 商城</div>
+                            <div id="shopTabs" class="shop-tabs" style="display: none;"></div>
+                            <div id="shopBalance" style="margin-bottom: 15px; color: var(--gold);"></div>
+                            <div class="inventory-grid" id="shopGrid"></div>
+                        </div>
+
+                        <!-- 排行榜面板（v7.83） -->
+                        <div id="panel-rank" class="panel-content hidden">
+                            <div class="panel-title">🏆 排行榜</div>
+                            <div id="rankBody"></div>
+                        </div>
+
+                        <!-- 图鉴面板（v7.75） -->
+                        <div id="panel-codex" class="panel-content hidden">
+                            <div class="panel-title">📖 图鉴</div>
+                            <div id="codexBody"></div>
+                        </div>
+
+                        <!-- 设置面板 -->
+                        <div id="panel-settings" class="panel-content hidden">
+                            <div class="panel-title">⚙️ 设置</div>
+
+                            <!-- 离线设置 -->
+                            <div class="stat-panel">
+                                <div class="stat-title">⏰ 离线设置</div>
+                                <div class="stat-row">
+                                    <span class="stat-label">最多离线奖励(小时):</span>
+                                    <input type="number" id="maxOfflineHours" name="maxOfflineHours" autocomplete="off" inputmode="numeric" aria-label="最多离线奖励（小时）" min="1" max="24" value="24" style="width: 60px; padding: 5px; background: var(--bg-sunken); border: 1px solid var(--border-l3); color: var(--text-l1); border-radius: 3px;" onchange="updateSetting('maxOfflineHours', this.value)">
+                                </div>
+                            </div>
+
+                            <!-- 玩法介绍 -->
+                            <div class="stat-panel">
+                                <div class="stat-title">📖 玩法介绍</div>
+                                <div class="stat-row">
+                                    <span class="stat-label">新手引导:</span>
+                                    <button class="btn btn-secondary" onclick="showTutorial(0)" style="padding: 6px 16px;">重新查看</button>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="stat-label">新手任务:</span>
+                                    <button class="btn btn-secondary" onclick="showQuestList()" style="padding: 6px 16px;">查看任务</button>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="stat-label">阶段重点:</span>
+                                    <button class="btn btn-secondary" onclick="showStageGuide()" style="padding: 6px 16px;">查看</button>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="stat-label">境界解锁一览:</span>
+                                    <button class="btn btn-secondary" onclick="showRealmUnlockList()" style="padding: 6px 16px;">查看</button>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="stat-label">成就:</span>
+                                    <button class="btn btn-secondary" onclick="showAchievementList()" style="padding: 6px 16px;">查看</button>
+                                </div>
+                            </div>
+
+                            <!-- 通知设置 -->
+                            <div class="stat-panel">
+                                <div class="stat-title">🔔 通知设置</div>
+                                <div class="stat-row">
+                                    <span class="stat-label">启用通知:</span>
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                        <input type="checkbox" id="enableNotifications" checked onchange="updateSetting('enableNotifications', this.checked)" style="width: 20px; height: 20px; cursor: pointer;">
+                                        <span id="notificationStatus">已启用</span>
+                                    </label>
+                                </div>
+                                <div class="settings-hint">关闭后不再弹出获得材料、升级等日常提示，只保留失败、警告、被击败等重要提示。</div>
+                            </div>
+
+                            <!-- 显示设置 -->
+                            <div class="stat-panel">
+                                <div class="stat-title">🎨 显示设置</div>
+                                <div class="stat-row">
+                                    <label class="stat-label" for="colorTheme">配色主题:</label>
+                                    <select id="colorTheme" name="colorTheme" autocomplete="off" onchange="setColorTheme(this.value)">
+                                        <option value="songyan">松烟铜器（默认）</option>
+                                        <option value="xuanzhi">宣纸墨韵（浅色）</option>
+                                        <option value="qinglv">青绿山水</option>
+                                        <option value="xuanye">玄夜星宿</option>
+                                    </select>
+                                </div>
+                                <div class="stat-row">
+                                    <label class="stat-label" for="fontScale">字体大小:</label>
+                                    <select id="fontScale" name="fontScale" autocomplete="off" onchange="updateSetting('fontScale', this.value)">
+                                        <option value="90">小</option>
+                                        <option value="100">中（默认）</option>
+                                        <option value="115">大</option>
+                                        <option value="130">特大</option>
+                                    </select>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="stat-label">自动突破:</span>
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                        <input type="checkbox" id="autoBreakthrough" checked onchange="updateSetting('autoBreakthrough', this.checked)" style="width: 20px; height: 20px; cursor: pointer;">
+                                        <span>修为满了自动突破小境界（离线也生效；大境界仍需手动）</span>
+                                    </label>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="stat-label">突破特效:</span>
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                        <input type="checkbox" id="breakthroughFx" checked onchange="updateSetting('breakthroughFx', this.checked)" style="width: 20px; height: 20px; cursor: pointer;">
+                                        <span>突破境界时播放特效</span>
+                                    </label>
+                                </div>
+                                <div class="stat-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                                    <span class="stat-label">突破特效回放:</span>
+                                    <div id="fxReplayList" class="fx-replay-list"></div>
+                                </div>
+                                <div class="stat-row">
+                                    <label class="stat-label" for="notificationSeconds">通知停留时间:</label>
+                                    <select id="notificationSeconds" name="notificationSeconds" autocomplete="off" onchange="updateSetting('notificationSeconds', this.value)">
+                                        <option value="2">2 秒（默认）</option>
+                                        <option value="4">4 秒</option>
+                                        <option value="8">8 秒</option>
+                                        <option value="15">15 秒</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 存档管理 -->
+                            <div class="stat-panel">
+                                <div class="stat-title">💾 存档管理</div>
+                                <div id="currentSlotLabel" style="color: var(--text-l3); font-size: 0.85em; margin-bottom: 8px;"></div>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <button class="btn" onclick="backToSlotSelect()">🔀 切换存档</button>
+                                    <button class="btn" onclick="exportSave()">📥 导出存档（下载文件）</button>
+                                    <button class="btn btn-secondary" onclick="importSave()">📤 导入存档（选择文件）</button>
+                                    <input type="file" id="importSaveFile" accept=".txt,.json,text/plain" style="display:none" onchange="onImportFileChosen(this)" aria-label="选择存档文件">
+                                    <button class="btn btn-secondary" onclick="resetGame()">🗑 删除当前存档</button>
+                                </div>
+                            </div>
+
+                            <!-- 支持作者（v7.79，只在网页版显示） -->
+                            <div class="stat-panel" id="supportPanel" hidden>
+                                <div class="stat-title">☕ 支持作者</div>
+                                <div class="support-text">《散修长生录》是一个人做的免费游戏。如果你玩得开心，可以去爱发电支持一下，订阅还能参与每月的新功能投票。发电完全自愿，不会换来任何游戏内的道具或加成。</div>
+                                <a class="btn support-btn" href="https://afdian.com/a/wltzlby" target="_blank" rel="noopener" onclick="supportOpened()">⚡ 去爱发电支持作者</a>
+                                <div class="support-text stats-note">网页版会匿名统计打开次数和修炼进度（只记数量，不含角色名、存档等任何个人信息），用来改进游戏。</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 侧边栏 -->
+                    <div class="side-panel">
+                        <!-- 修为信息 -->
+                        <div class="stat-panel">
+                            <div class="stat-title"><span data-ico="qi">✨</span> 修为信息</div>
+                            <div class="stat-row">
+                                <span class="stat-label">修为值:</span>
+                                <span class="stat-value"><span id="cultivationXP">0/100</span></span>
+                            </div>
+                            <div style="width: 100%; height: 20px; background: var(--bg-sunken); border: 1px solid var(--jade); border-radius: 3px; margin: 8px 0; overflow: hidden;">
+                                <div style="width: 0%; height: 100%; background: var(--jade); transition: width 0.3s;" id="cultivationBar"></div>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">下次突破:</span>
+                                <span class="stat-value" id="nextBreakthrough">100</span>
+                            </div>
+                        </div>
+
+                        <!-- 境界感悟：原著境界描述、寿元、神通、资质与金丹品质 -->
+                        <div class="stat-panel lore-journal">
+                            <div class="stat-title">📜 境界感悟</div>
+                            <div id="realmLoreBox" style="font-size: 0.85em; line-height: 1.7; color: var(--text-l3);"></div>
+                        </div>
+
+                        <!-- 技能经验 -->
+                        <div class="stat-panel">
+                            <div class="stat-title">📊 技能经验</div>
+                            <div id="skillExperienceList"></div>
+                        </div>
+
+                        <!-- 装备信息 -->
+                        <div class="stat-panel">
+                            <div class="stat-title">⚔️ 装备</div>
+                            <div class="stat-row">
+                                <span class="stat-label">武器:</span>
+                                <span class="stat-value" id="weaponDisplay">无</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">防具:</span>
+                                <span class="stat-value" id="armorDisplay">无</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">饰品:</span>
+                                <span class="stat-value" id="jewelryDisplay">无</span>
+                            </div>
+                        </div>
+
+                        <!-- P2功能：属性面板 -->
+                        <div class="stat-panel">
+                            <div class="stat-title">💪 属性面板</div>
+                            <div class="stat-row">
+                                <span class="stat-label">生命值:</span>
+                                <span class="stat-value" id="hpDisplay">100</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">攻击力:</span>
+                                <span class="stat-value" id="atkDisplay">10</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">防御力:</span>
+                                <span class="stat-value" id="defDisplay">5</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">攻速:</span>
+                                <span class="stat-value" id="spdDisplay">10</span>
+                            </div>
+                        </div>
+
+                        <!-- 灵根与功法特效 -->
+                        <div class="stat-panel">
+                            <div class="stat-title">🌱 灵根与功法特效</div>
+                            <div id="bonusList" style="font-size: 0.85em; line-height: 1.7; color: var(--text-l3);"></div>
+                        </div>
+
+                        <!-- 离线收益预计 -->
+                        <div class="stat-panel">
+                            <div class="stat-title">🌙 离线收益预计</div>
+                            <div id="offlineIncome" class="no-data">无当前行动</div>
+                        </div>
+
+                        <!-- 自动保存提示 -->
+                        <div style="text-align: center; color: var(--text-l4); font-size: 0.8em; margin-top: auto;">
+                            💾 已自动保存
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 物品详情弹窗（P1功能）-->
+    <!-- 购买数量对话框 -->
+    <div id="buyModal" class="modal" style="display: none;">
+        <div class="modal-content codex-modal" role="dialog" aria-modal="true" style="max-width: 380px; padding: 30px;">
+            <button type="button" class="modal-close" onclick="closeBuyDialog()" aria-label="关闭">&times;</button>
+            <div style="text-align: center; margin-bottom: 16px;">
+                <div class="codex-icon" style="font-size: 44px; margin-bottom: 8px;" id="buyIcon">📦</div>
+                <div class="codex-name" style="font-size: 1.2em; color: var(--jade); font-weight: bold;" id="buyName">商品</div>
+                <div style="color: var(--text-l4); font-size: 0.85em; margin-top: 4px;" id="buyDesc"></div>
+            </div>
+            <div style="background: var(--bg-sunken); padding: 12px 15px; border-radius: 4px; margin-bottom: 14px; line-height: 1.8em;">
+                <div><span style="color: var(--text-l4);">单价:</span> <span id="buyUnitPrice">-</span></div>
+                <div><span style="color: var(--text-l4);">已有:</span> <span id="buyOwned">0</span></div>
+                <div><span style="color: var(--text-l4);" id="buyCurLabel">灵石:</span> <span id="buyCoins">0</span></div>
+            </div>
+            <div class="sell-qty-row" style="margin-bottom: 14px;">
+                <span>数量</span>
+                <button class="btn btn-secondary" onclick="changeBuyQty(-1)">−</button>
+                <input type="number" id="buyQty" name="buyQty" min="1" value="1" autocomplete="off" inputmode="numeric" aria-label="购买数量" oninput="updateBuyLabel()">
+                <button class="btn btn-secondary" onclick="changeBuyQty(1)">+</button>
+                <button class="btn btn-secondary" onclick="changeBuyQty('max')">最大</button>
+            </div>
+            <div id="buyTotalHint" style="text-align: center; color: var(--color-danger); min-height: 1.4em; font-size: 0.85em;"></div>
+            <button class="btn" id="buyConfirmBtn" onclick="confirmBuy()" style="width: 100%;">购买</button>
+        </div>
+    </div>
+
+    <div id="itemDetailModal" class="modal" style="display: none;">
+        <div class="modal-content codex-modal" role="dialog" aria-modal="true" style="max-width: 400px; padding: 30px;">
+            <button type="button" class="modal-close" onclick="closeItemDetail()" aria-label="关闭">&times;</button>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div class="codex-icon" style="font-size: 48px; margin-bottom: 10px;" id="itemIcon">📦</div>
+                <div class="codex-name" style="font-size: 1.2em; color: var(--jade); font-weight: bold;" id="itemName">物品名称</div>
+                <div class="codex-type" id="itemTypeSeal"></div>
+            </div>
+            <div style="background: var(--bg-sunken); padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                <div style="color: var(--text-l4); font-size: 0.9em; margin-bottom: 8px;">📝 物品信息</div>
+                <div style="color: var(--text-l1); line-height: 1.6em;">
+                    <div><span style="color: var(--text-l4);">类型:</span> <span id="itemType">-</span></div>
+                    <div><span style="color: var(--text-l4);">持有数量:</span> <span id="itemQty" style="color: var(--jade); font-weight: bold;">0</span></div>
+                </div>
+            </div>
+            <div style="background: rgba(111,156,138,0.1); padding: 15px; border-radius: 4px; margin-bottom: 15px; border-left: 3px solid var(--jade);">
+                <div style="color: var(--jade); font-size: 0.9em; margin-bottom: 8px;">💡 用途</div>
+                <div style="color: var(--gold); font-size: 0.9em; line-height: 1.6em;" id="itemUsage">暂无已知用途</div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+                <button class="btn" onclick="closeItemDetail()" style="flex: 1 1 40%;">关闭</button>
+                <button class="btn btn-secondary" id="itemActionBtn" onclick="performItemAction()" style="flex: 1 1 40%; display: none;">操作</button>
+                <div id="itemSellQtyRow" class="sell-qty-row" style="display: none;">
+                    <span>数量</span>
+                    <button class="btn btn-secondary" onclick="changeSellQty(-1)">−</button>
+                    <input type="number" id="itemSellQty" name="itemSellQty" autocomplete="off" inputmode="numeric" aria-label="出售数量" min="1" value="1" oninput="updateSellQtyLabel()">
+                    <button class="btn btn-secondary" onclick="changeSellQty(1)">+</button>
+                    <button class="btn btn-secondary" onclick="changeSellQty('max')">最大</button>
+                </div>
+                <button class="btn btn-secondary" id="itemSellBtn" onclick="sellItem(false)" style="flex: 1 1 40%; display: none;">出售</button>
+                <button class="btn btn-secondary" id="itemSellAllBtn" onclick="sellItem(true)" style="flex: 1 1 40%; display: none;">全部出售</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 突破模态框 -->
+    <div id="breakthroughModal" class="modal">
+        <div class="modal-content talisman-modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" onclick="closeBreakthroughModal()" aria-label="关闭">&times;</button>
+            <div class="modal-title" id="btModalTitle">突破修为</div>
+            <div class="bt-realms">
+                <span class="bt-realm" id="btCurrentRealm" title="当前境界">-</span>
+                <span class="bt-arrow" aria-hidden="true"></span>
+                <span class="bt-realm next" id="btNextRealm" title="下一境界">-</span>
+                <span class="bt-rate" id="btRateSeal" hidden></span>
+            </div>
+            <div class="stat-panel" style="margin-bottom: 20px;">
+                <div class="stat-row">
+                    <span class="stat-label">突破方式:</span>
+                    <span class="stat-value" id="btBreakthroughType">自然突破</span>
+                </div>
+                <!-- 大境界突破的丹药需求区域（默认隐藏） -->
+                <div id="btPillRequirement" style="display: none; margin-top: 15px; padding: 10px; background: rgba(249, 158, 11, 0.1); border: 1px solid var(--color-warning); border-radius: 4px;">
+                    <div class="stat-row">
+                        <span class="stat-label">所需丹药:</span>
+                        <span class="stat-value" id="btPillName">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">当前拥有:</span>
+                        <span class="stat-value" id="btPillCount">-</span>
+                    </div>
+                    <div id="btPillGuide" class="bt-guide" style="display: none;"></div>
+                </div>
+                <!-- 炼虚 21-24：渡劫入口（默认隐藏，见 renderTribulationGate） -->
+                <div id="btTribulation" style="display: none; margin-top: 15px; padding: 10px; background: rgba(179, 157, 219, 0.12); border: 1px solid var(--violet); border-radius: 4px;"></div>
+            </div>
+            <button class="btn" id="btButton" onclick="attemptBreakthrough()" style="width: 100%; margin-top: 20px;">
+                🌟 开始突破 🌟
+            </button>
+        </div>
+    </div>
+
+    <!-- 灵域选择模态框（化神期起，进入战斗前选一个，v6.77） -->
+    <div id="domainSelectModal" class="modal">
+        <div class="modal-content" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" onclick="confirmDomainChoice(null)" aria-label="不使用灵域">&times;</button>
+            <div class="modal-title">🌀 选择灵域 🌀</div>
+            <p style="color: var(--text-l4, var(--text-l4)); margin-bottom: 14px; font-size: 0.9em;">
+                <span id="domainSelectHint">灵域借天地之势布下，对战斗双方同时生效。</span>整场战斗（循环挑战期间）持续、中途不可更换。
+                激活消耗 <span data-ico="shenshi">👁️</span> 神识 <b id="domainShenshiCost"></b>（现有 <b id="domainShenshiBalance">0</b>）。
+            </p>
+            <div id="domainSelectList" class="domain-grid"></div>
+            <button class="btn btn-secondary" onclick="confirmDomainChoice(null)" style="width: 100%; margin-top: 16px;">
+                不使用灵域，直接进入
+            </button>
+        </div>
+    </div>
+
+    <!-- 离线结算模态框 -->
+    <div id="offlineModal" class="modal">
+        <div class="modal-content scroll-modal" role="dialog" aria-modal="true">
+            <div class="ending-art offline-art"><img src="img/offline.webp" alt="" decoding="async" onerror="this.parentNode.remove()"></div>
+            <div class="modal-title">闭关归来</div>
+            <div id="offlineContent"></div>
+            <button class="btn" onclick="closeOfflineModal()" style="width: 100%; margin-top: 20px;">
+                继续修行
+            </button>
+        </div>
+    </div>
+
+    <!-- 奇遇（v7.45）：有待处理的奇遇或生效中的机缘时右下角出现「缘」印 -->
+    <button type="button" id="qiyuSeal" class="qiyu-seal" onclick="openQiyuModal()" aria-label="奇遇" hidden><span class="qiyu-seal-char">缘</span><span class="qiyu-seal-count" id="qiyuSealCount" hidden></span></button>
+    <div id="qiyuModal" class="modal">
+        <div class="modal-content scroll-modal qiyu-modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" onclick="closeQiyuModal()" aria-label="关闭">&times;</button>
+            <div class="modal-title">奇遇</div>
+            <div id="qiyuContent"></div>
+        </div>
+    </div>
+
+    <!-- 道途（v7.52） -->
+    <div id="daoPathModal" class="modal">
+        <div class="modal-content scroll-modal qiyu-modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" onclick="closeDaoPathModal()" aria-label="关闭">&times;</button>
+            <div class="modal-title">道途抉择</div>
+            <div id="daoPathContent"></div>
+        </div>
+    </div>
+
+    <!-- 通关结局（v7.56） -->
+    <div id="endingModal" class="modal">
+        <div class="modal-content scroll-modal ending-modal" role="dialog" aria-modal="true">
+            <div id="endingContent"></div>
+            <button class="btn" onclick="closeEnding()" style="width: 100%; margin-top: 16px;">继续修行</button>
+        </div>
+    </div>
+
+    <!-- 功法切换模态框 -->
+    <div id="artSwitchModal" class="modal">
+        <div class="modal-content art-switch-modal" role="dialog" aria-modal="true" style="max-width: 500px;">
+            <button type="button" class="modal-close" onclick="closeArtSwitchModal()" aria-label="关闭">&times;</button>
+            <div class="modal-title">选择功法</div>
+            <div id="artSwitchList" style="max-height: 400px; overflow-y: auto;"></div>
+            <button class="btn" onclick="closeArtSwitchModal()" style="width: 100%; margin-top: 15px;">关闭</button>
+        </div>
+    </div>
+
+    <!-- P3优化：克制系统教程模态框 -->
+    <!-- 新手引导 -->
+    <div id="tutorialModal" class="modal">
+        <div class="modal-content tutorial-modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" onclick="closeTutorial()" aria-label="关闭">&times;</button>
+            <div id="tutorialContent"></div>
+        </div>
+    </div>
+
+    <!-- 境界解锁提示 / 境界解锁一览（v6.79） -->
+    <div id="realmUnlockModal" class="modal">
+        <div class="modal-content tutorial-modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" onclick="closeRealmUnlockModal()" aria-label="关闭">&times;</button>
+            <div id="realmUnlockContent"></div>
+        </div>
+    </div>
+
+    <div id="counterSystemModal" class="modal">
+        <div class="modal-content counter-modal" role="dialog" aria-modal="true" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
+            <button type="button" class="modal-close" onclick="closeCounterSystemModal()" aria-label="关闭">&times;</button>
+            <div class="modal-title">灵根克制</div>
+            <div id="counterRing" class="counter-ring"></div>
+
+            <div class="stat-panel">
+                <div class="stat-row" style="background: rgba(111,156,138,0.1); padding: 15px; margin-bottom: 15px; border-radius: 4px;">
+                    <div class="sec-title" style="color: var(--jade); font-weight: bold; margin-bottom: 10px;">📖 克制系统说明</div>
+                    <div style="color: var(--text-l3); font-size: 0.95em; line-height: 1.8;">
+                        灵根之间存在相生相克的关系。当你的灵根克制敌人时，伤害提升30%，命中率提升25%。<br/>
+                        当你的灵根被敌人克制时，伤害降低20%，命中率降低25%。
+                    </div>
+                </div>
+
+                <div class="stat-row" style="background: var(--bg-l2); padding: 12px; margin-bottom: 10px; border-radius: 4px;">
+                    <span class="stat-label">五行克制循环</span>
+                </div>
+                <div style="margin-left: 10px; margin-bottom: 15px; font-size: 0.95em; line-height: 2;">
+                    🟡 <span style="color: var(--gold);">金灵根</span> → 克制 <span style="color: var(--jade);">木灵根</span> → 克制 <span style="color: var(--text-l4);">土灵根</span> → 克制 <span style="color: var(--azure);">水灵根</span> → 克制 <span style="color: var(--color-danger);">火灵根</span> → 克制 <span style="color: var(--gold);">金灵根</span><br/>
+                </div>
+
+                <div class="stat-row" style="background: var(--bg-l2); padding: 12px; margin-bottom: 10px; border-radius: 4px;">
+                    <span class="stat-label">特殊灵根</span>
+                </div>
+                <div style="margin-left: 10px; margin-bottom: 15px; font-size: 0.95em; line-height: 2;">
+                    🟣 <span style="color: var(--violet);">雷灵根</span> ↔ <span style="color: var(--azure);">冰灵根</span> (互相克制)<br/>
+                    🌪️ <span style="color: var(--text-l4);">风灵根</span> - 无克制关系，但有全面的辅助特效
+                </div>
+
+                <div class="stat-row" style="background: var(--bg-l2); padding: 12px; margin-bottom: 10px; border-radius: 4px;">
+                    <span class="stat-label">灵根特效（战斗 + 生活技能）</span>
+                </div>
+                <div id="rootEffectList" style="margin-left: 10px; font-size: 0.9em; line-height: 1.8; color: var(--text-l3);"></div>
+            </div>
+
+            <button class="btn" onclick="closeCounterSystemModal()" style="width: 100%; margin-top: 20px;">了解了</button>
+        </div>
+    </div>
+
+    <script src="art.js?v=2.0"></script>
+    <script src="game.js?v=15.58"></script>
+
+    <!-- 手机底部Tab栏 -->
+    <div class="mobile-bottom-tabs" id="mobileTabBar">
+        <div class="mobile-tab-item active" data-tab="cultivation" onclick="switchMobileTab('cultivation')">
+            <div class="icon">🧘</div>
+            <div>修炼</div>
+        </div>
+        <div class="mobile-tab-item" data-tab="battle" onclick="switchMobileTab('battle')">
+            <div class="icon">⚔️</div>
+            <div>战斗</div>
+        </div>
+        <div class="mobile-tab-item" data-tab="shop" onclick="switchMobileTab('shop')">
+            <div class="icon">🏪</div>
+            <div>商城</div>
+        </div>
+        <div class="mobile-tab-item" data-tab="settings" onclick="switchMobileTab('settings')">
+            <div class="icon">⚙️</div>
+            <div>设置</div>
+        </div>
+        <div class="mobile-tab-item" data-tab="inventory" onclick="switchMobileTab('inventory')">
+            <div class="icon">🎒</div>
+            <div>背包</div>
+            <span class="badge-dot" id="invBadgeMobile" hidden></span>
+        </div>
+    </div>
+
+    <script>
+        // 手机 Tab 栏：切换到对应面板（高亮与侧栏显示由 switchPanel 同步）
+        function switchMobileTab(tabName) {
+            switchPanel(tabName);
+        }
+    </script>
+</body>
+</html>
