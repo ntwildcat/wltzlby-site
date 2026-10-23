@@ -3722,3 +3722,6 @@ body[data-panel="rank"] .nav-mini[data-nav="rank"] { background: var(--bg-l3); b
 /* v7.90 装备页的奇物一栏 */
 .relic-fold .relic-grid { margin-top: 8px; }
 .relic-fold .relic-open { margin-top: 10px; }
+
+/* v7.91 引路人介绍：「上一步 / 下一步 / 开始修仙」粘在弹窗可视区域底部，小屏手机不用先往下滑才找得到 */
+.tutorial-modal .tutorial-actions { position: sticky; bottom: calc(-1 * var(--spacing-2xl)); z-index: 2; margin: 0 calc(-1 * var(--spacing-2xl)) calc(-1 * var(--spacing-2xl)); padding: 18px var(--spacing-2xl) var(--spacing-2xl); background: linear-gradient(180deg, transparent, var(--inkstone) 40%); }
