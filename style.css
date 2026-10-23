@@ -3696,3 +3696,25 @@ body[data-panel="rank"] .nav-mini[data-nav="rank"] { background: var(--bg-l3); b
 /* v7.88 排行榜时间（精确到分钟） */
 .tb-realm { text-align: right; line-height: 1.35; }
 .tb-time { display: block; font-style: normal; font-family: var(--font-num); font-size: 1.05em; color: var(--text-l4); white-space: nowrap; }
+
+/* v7.89 窄屏（≤1024px，单栏布局）不再显示右侧栏：原来它排在每个界面最下面，内容和别处重复（属性在装备页、修为在顶部、技能经验在技能栏）；
+   境界感悟（渡劫等入口、已有的加成、灵根与功法特效）改由顶部的折叠栏显示，手机（≤768px）的纸笺样式不变 */
+@media (max-width: 1024px) {
+    .side-panel { display: none !important; }
+    .realm-lore-mobile { display: block; }
+    body.in-battle .realm-lore-mobile { display: none; }
+    .realm-lore-mobile .rl-sub { margin-top: 6px; }
+    .realm-lore-mobile .rl-sub > summary { cursor: pointer; color: var(--jade); }
+}
+@media (min-width: 769px) and (max-width: 1024px) {
+    .realm-lore-mobile { margin: 0 0 12px; padding: 10px 12px; border-left: 3px solid var(--bronze); border-radius: var(--radius-md); background: var(--bg-l2); font-size: 0.88em; line-height: 1.7; }
+    .realm-lore-mobile > summary { cursor: pointer; list-style: none; }
+    .realm-lore-mobile > summary::-webkit-details-marker { display: none; }
+    .realm-lore-mobile > summary::after { content: ' ▸'; color: var(--text-l4); font-weight: normal; }
+    .realm-lore-mobile[open] > summary::after { content: ' ▾'; }
+}
+
+/* v7.89 问道塔：自己的数值、回放开关 */
+.tw-me-stats { margin-top: 2px; font-size: 0.85em; color: var(--text-l3); }
+.tw-me-stats b { color: var(--jade); font-weight: normal; }
+.tw-replay-opt { display: block; margin-top: 8px; font-size: 0.85em; }

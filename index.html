@@ -16,7 +16,7 @@
             var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', THEMES[t]);
         })();
     </script>
-    <link rel="stylesheet" href="style.css?v=14.58">
+    <link rel="stylesheet" href="style.css?v=14.60">
 
 </head>
 <body data-panel="cultivation">
@@ -166,10 +166,11 @@
                 <!-- 支持作者的一次性提示（v7.79，网页版，第一次到筑基 / 看完证道结局） -->
                 <div id="supportNudge" class="support-nudge" hidden></div>
 
-                <!-- 手机端境界感悟：侧栏在手机上排到页面最底部，渡劫 / 渡衰 / 精元开关等入口放这里（桌面端隐藏） -->
+                <!-- 窄屏（≤1024px）境界感悟：窄屏不显示右侧栏（v7.89），渡劫 / 渡衰 / 精元开关等入口、已有的加成、灵根与功法特效放这里（宽屏隐藏） -->
                 <details id="realmLoreMobile" class="realm-lore-mobile">
                     <summary id="realmLoreMobileSummary">📜 境界感悟</summary>
                     <div id="realmLoreMobileBox"></div>
+                    <details class="rl-sub"><summary>🌱 灵根与功法特效</summary><div id="bonusListMobile"></div></details>
                 </details>
 
                 <!-- 面板容器 -->
@@ -697,12 +698,6 @@
                             <div id="bonusList" style="font-size: 0.85em; line-height: 1.7; color: var(--text-l3);"></div>
                         </div>
 
-                        <!-- 离线收益预计 -->
-                        <div class="stat-panel">
-                            <div class="stat-title">🌙 离线收益预计</div>
-                            <div id="offlineIncome" class="no-data">无当前行动</div>
-                        </div>
-
                         <!-- 自动保存提示 -->
                         <div style="text-align: center; color: var(--text-l4); font-size: 0.8em; margin-top: auto;">
                             💾 已自动保存
@@ -935,7 +930,7 @@
     </div>
 
     <script src="art.js?v=2.0"></script>
-    <script src="game.js?v=15.62"></script>
+    <script src="game.js?v=15.65"></script>
 
     <!-- 手机底部Tab栏 -->
     <div class="mobile-bottom-tabs" id="mobileTabBar">
