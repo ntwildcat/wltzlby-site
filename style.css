@@ -3684,3 +3684,11 @@ body[data-panel="rank"] .nav-mini[data-nav="rank"] { background: var(--bg-l3); b
 
 /* v7.85 排行榜独立成页 */
 .rank-desc { margin: 0 0 10px; }
+
+/* v7.87 榜上名字 */
+.tb-namerow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; font-size: 0.88em; color: var(--text-l2); }
+.tb-namerow b { color: var(--text-l1); font-weight: normal; }
+.tb-namerow.taken { color: var(--cinnabar-2); }
+.tb-namerow input { width: 12em; padding: 3px 6px; font: inherit; }
+.tb-namemsg { font-size: 0.92em; color: var(--cinnabar-2); }
+.name-hint { margin-top: 4px; font-size: 0.82em; color: var(--cinnabar-2); min-height: 1em; }
