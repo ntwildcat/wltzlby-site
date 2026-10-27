@@ -16,7 +16,7 @@
             var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', THEMES[t]);
         })();
     </script>
-    <link rel="stylesheet" href="style.css?v=14.62">
+    <link rel="stylesheet" href="style.css?v=14.65">
 
 </head>
 <body data-panel="cultivation">
@@ -58,6 +58,8 @@
                     <!-- 存档选择：最多 3 个存档 -->
                     <p id="slotHint" style="color: var(--text-l4); margin-bottom: 20px;">选择一个存档，或新建角色（最多 3 个存档）</p>
                     <div id="slotSelect" class="slot-select"></div>
+                    <!-- v7.93 账号与云存档（网页版） -->
+                    <div id="accountBar" class="account-bar" hidden></div>
 
                     <div id="createSection" style="display: none;">
                     <button class="btn btn-secondary" onclick="showSlotSelect()" style="margin-bottom: 12px; padding: 4px 12px;">← 返回存档选择</button>
@@ -601,6 +603,12 @@
                                 </div>
                             </div>
 
+                            <!-- v7.93 账号与云存档（只在网页版显示） -->
+                            <div class="stat-panel" id="accountPanelWrap" hidden>
+                                <div class="stat-title">☁️ 账号与云存档</div>
+                                <div id="accountPanel"></div>
+                            </div>
+
                             <!-- 存档管理 -->
                             <div class="stat-panel">
                                 <div class="stat-title">💾 存档管理</div>
@@ -826,9 +834,11 @@
     <!-- 离线结算模态框 -->
     <div id="offlineModal" class="modal">
         <div class="modal-content scroll-modal" role="dialog" aria-modal="true">
+            <div class="scroll-body">
             <div class="ending-art offline-art"><img src="img/offline.webp" alt="" decoding="async" onerror="this.parentNode.remove()"></div>
             <div class="modal-title">闭关归来</div>
             <div id="offlineContent"></div>
+            </div>
             <button class="btn" onclick="closeOfflineModal()" style="width: 100%; margin-top: 20px;">
                 继续修行
             </button>
@@ -840,8 +850,10 @@
     <div id="qiyuModal" class="modal">
         <div class="modal-content scroll-modal qiyu-modal" role="dialog" aria-modal="true">
             <button type="button" class="modal-close" onclick="closeQiyuModal()" aria-label="关闭">&times;</button>
+            <div class="scroll-body">
             <div class="modal-title">奇遇</div>
             <div id="qiyuContent"></div>
+            </div>
         </div>
     </div>
 
@@ -849,15 +861,17 @@
     <div id="daoPathModal" class="modal">
         <div class="modal-content scroll-modal qiyu-modal" role="dialog" aria-modal="true">
             <button type="button" class="modal-close" onclick="closeDaoPathModal()" aria-label="关闭">&times;</button>
+            <div class="scroll-body">
             <div class="modal-title">道途抉择</div>
             <div id="daoPathContent"></div>
+            </div>
         </div>
     </div>
 
     <!-- 通关结局（v7.56） -->
     <div id="endingModal" class="modal">
         <div class="modal-content scroll-modal ending-modal" role="dialog" aria-modal="true">
-            <div id="endingContent"></div>
+            <div class="scroll-body"><div id="endingContent"></div></div>
             <button class="btn" onclick="closeEnding()" style="width: 100%; margin-top: 16px;">继续修行</button>
         </div>
     </div>
@@ -874,6 +888,22 @@
 
     <!-- P3优化：克制系统教程模态框 -->
     <!-- 新手引导 -->
+    <!-- v7.96 材料从哪来：点配方卡片上的材料 -->
+    <div id="sourceModal" class="modal" onclick="if (event.target === this) closeItemSource()">
+        <div class="modal-content source-modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" onclick="closeItemSource()" aria-label="关闭">&times;</button>
+            <div id="sourceContent"></div>
+        </div>
+    </div>
+
+    <!-- v7.93 账号：登录 / 注册 / 恢复码 / 本机和云端不一致时选择 -->
+    <div id="accountModal" class="modal">
+        <div class="modal-content account-modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" onclick="closeAccount()" aria-label="关闭">&times;</button>
+            <div id="accountContent"></div>
+        </div>
+    </div>
+
     <div id="tutorialModal" class="modal">
         <div class="modal-content tutorial-modal" role="dialog" aria-modal="true">
             <button type="button" class="modal-close" onclick="closeTutorial()" aria-label="关闭">&times;</button>
@@ -930,7 +960,7 @@
     </div>
 
     <script src="art.js?v=2.0"></script>
-    <script src="game.js?v=15.67"></script>
+    <script src="game.js?v=15.72"></script>
 
     <!-- 手机底部Tab栏 -->
     <div class="mobile-bottom-tabs" id="mobileTabBar">

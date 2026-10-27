@@ -3725,3 +3725,56 @@ body[data-panel="rank"] .nav-mini[data-nav="rank"] { background: var(--bg-l3); b
 
 /* v7.91 引路人介绍：「上一步 / 下一步 / 开始修仙」粘在弹窗可视区域底部，小屏手机不用先往下滑才找得到 */
 .tutorial-modal .tutorial-actions { position: sticky; bottom: calc(-1 * var(--spacing-2xl)); z-index: 2; margin: 0 calc(-1 * var(--spacing-2xl)) calc(-1 * var(--spacing-2xl)); padding: 18px var(--spacing-2xl) var(--spacing-2xl); background: linear-gradient(180deg, transparent, var(--inkstone) 40%); }
+
+/* v7.93 账号与云存档 */
+.account-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 14px; padding: 10px 12px; border: 1px dashed var(--border-l3); font-size: 0.88em; color: var(--text-l3); line-height: 1.6; }
+.account-bar[hidden] { display: none; }
+.account-bar .ac-sum { flex: 1 1 200px; }
+.account-bar b { color: var(--gold); font-weight: normal; }
+.account-bar.in-panel { margin-top: 0; }
+#accountModal { z-index: 1200; }
+.account-modal { max-width: 420px; }
+.account-modal .form-group { margin-bottom: 12px; }
+.account-modal .form-group input { width: 100%; box-sizing: border-box; }
+.account-modal .ac-main { width: 100%; margin-top: 4px; }
+.ac-note { margin-bottom: 14px; font-size: 0.88em; line-height: 1.75; color: var(--text-l3); }
+.ac-note b { color: var(--gold); font-weight: normal; }
+.ac-msg { min-height: 1.5em; margin: 4px 0 8px; font-size: 0.88em; color: var(--cinnabar-2); }
+.ac-msg.ok { color: var(--jade); }
+.ac-links { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.ac-link { background: none; border: none; padding: 4px 0; color: var(--text-l3); font: inherit; font-size: 0.88em; text-decoration: underline; cursor: pointer; }
+.ac-btns { display: flex; flex-direction: column; gap: 10px; }
+.ac-code { margin: 6px 0 12px; padding: 14px 8px; border: 1px solid var(--gold); text-align: center; font-family: var(--font-num), monospace; font-size: 1.5em; letter-spacing: 2px; color: var(--gold); user-select: all; }
+.slot-cloud { margin-top: 2px; font-size: 0.78em; color: var(--text-l4); }
+.slot-cloud.warn { color: var(--cinnabar-2); }
+.cc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.cc-col { padding: 10px; border: 1px solid var(--border-l3); font-size: 0.86em; line-height: 1.7; color: var(--text-l2); }
+.cc-col.newer { border-color: var(--jade); }
+.cc-col b { color: var(--text-l1); font-weight: normal; }
+.cc-time { font-size: 0.92em; color: var(--text-l4); }
+.ac-danger { align-self: center; color: var(--cinnabar-2); }
+
+/* v7.96 材料从哪来 */
+.mat-src { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.mat-src:hover { filter: brightness(1.25); }
+#sourceModal { z-index: 1150; }
+.source-modal { max-width: 440px; }
+.src-have { margin: -6px 0 12px; font-size: 0.9em; color: var(--text-l3); }
+.src-have b { color: var(--gold); font-weight: normal; }
+.src-have b.lack { color: var(--cinnabar-2); }
+.src-title { margin-bottom: 6px; font-size: 0.85em; color: var(--text-l4); }
+.src-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px dashed var(--border-l3); font-size: 0.9em; color: var(--text-l2); }
+.src-row.locked { color: var(--text-l4); }
+.src-text small { display: block; margin-top: 2px; font-size: 0.85em; color: var(--text-l4); }
+.src-row .btn { flex: none; }
+.src-flash { animation: srcFlash 1.4s ease-out; }
+@keyframes srcFlash { 0%, 40% { box-shadow: 0 0 0 3px var(--gold); } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+/* v7.97 画卷弹窗：外框不裁切（上下卷轴要伸出纸边），内容放进 .scroll-body 在纸里滚动；
+   原来外框 overflow: visible，内容超过 80vh 时直接画到下面那根卷轴外面、也滚不到。底部按钮在卷心外面，始终看得到 */
+.modal-content.scroll-modal { display: flex; flex-direction: column; }
+.scroll-modal > .scroll-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #b9a27a transparent; }
+.scroll-modal > .scroll-body::-webkit-scrollbar { width: 6px; }
+.scroll-modal > .scroll-body::-webkit-scrollbar-thumb { background: #b9a27a; border-radius: 3px; }
+.scroll-modal > .btn, .scroll-modal > .ui-dialog-actions { flex: none; }
+.scroll-body .ui-dialog-msg { max-height: none; overflow: visible; }   /* v7.97 外层卷心已经负责滚动，正文不再单独滚 */
